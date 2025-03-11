@@ -12,25 +12,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ChainService } from './chain.service';
+import axios from 'axios';
 import { Observable } from 'rxjs';
-import { v4 as uuidv4 } from 'uuid';
-import { ChatZhipuAI } from '@langchain/community/chat_models/zhipuai';
-import { PromptTemplate } from '@langchain/core/prompts';
-import { BufferMemory } from 'langchain/memory';
-import {} from '@langchain/community/document_loaders/web/youtube';
 import { ResponseInterceptor } from 'src/common/interceptors/api-result.interceptor';
-import { CharacterTextSplitter } from '@langchain/textsplitters';
-import { TextLoader } from 'langchain/document_loaders/fs/text';
 import { fstat } from 'fs';
 import * as path from 'path';
-
-const llm = new ChatZhipuAI({
-  model: 'GLM-4-Flash', // Available models:
-  temperature: 1,
-  zhipuAIApiKey: 'cf410bd67d4a4a23a62cd64bd63e41c3.d2qp97howKgS0idr',
-});
-
-const memory = new BufferMemory();
+import { v4 as uuidv4 } from 'uuid';
 
 @Controller('chain')
 export class ChainController {
@@ -48,43 +35,37 @@ export class ChainController {
     @Query('chat_history_id') chat_history_id: number,
     @Request() req,
   ) {
-    const userId = req.user.id;
-    try {
-      const docs = await new TextLoader(
-        path.join(__dirname, '../../../public/1.txt'),
-      ).load();
+    // const userId = req.user.id;
 
-      docs[0].pageContent;
-    } catch (e) {
-      console.log(e);
-    }
-    /*     const textSplitter = new CharacterTextSplitter({
-      chunkSize: 100,
-      chunkOverlap: 0,
+    const chatHistory = await this.chatHistoryItemService.findAll({
+      chat_history_id: chat_history_id,
     });
-    const texts = await textSplitter.splitText([docs]); */
 
-    /**+
-     * 1. 获取用户输入
-     * 2. 结合聊天记录
-     * 3. RAG检索
-     * 4. 调用模型进行处理
-     * 5. 将结果推送给客户端
-     */
+    const data = await axios.post('http://127.0.0.1:5000/invoke', {
+      memory: chatHistory,
+      input: input,
+    });
 
-    /*     this.chatHistoryItemService.create({
+    this.chatHistoryItemService.create({
       type: 0,
       content: input,
       chat_history_id,
     });
 
-    const stream = await llm.stream(input);
-    let message = '';
+    this.chatHistoryItemService.create({
+      type: 1,
+      content: data.data,
+      chat_history_id,
+    });
+
     return new Observable((observer) => {
       (async () => {
         observer.next({ data: { value: uuidv4(), type: 'START' } });
+        observer.next({ data: { value: data.data, type: 'MESSAGE' } });
+        observer.next({ data: { type: 'END' } });
+        observer.complete();
 
-        for await (const chunk of stream) {
+        /*  for await (const chunk of stream) {
           // console.log(chunk);
           // 将流中的数据推送给客户端
           message += chunk.content;
@@ -99,9 +80,9 @@ export class ChainController {
           type: 1,
           content: message,
           chat_history_id,
-        });
+        }); */
       })();
-    }); */
+    });
   }
 
   @Get(':id')
