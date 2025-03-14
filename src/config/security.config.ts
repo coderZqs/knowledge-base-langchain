@@ -10,7 +10,7 @@ export const SecurityConfig = registerAs(securityRegToken, () => ({
   refreshSecret: env('REFRESH_TOKEN_SECRET'),
   refreshExpire: envNumber('REFRESH_TOKEN_EXPIRE'),
   WX_APPID: env('WX_APPID'),
-  WX_SECRET: env('WX_SECRET')
+  WX_SECRET: env('WX_SECRET'),
 }));
 
 export type ISecurityConfig = ConfigType<typeof SecurityConfig>;

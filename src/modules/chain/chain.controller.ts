@@ -10,14 +10,19 @@ import {
   ValidationPipe,
   Request,
   UseInterceptors,
+  Post,
+  UploadedFile,
 } from '@nestjs/common';
 import { ChainService } from './chain.service';
 import axios from 'axios';
 import { Observable } from 'rxjs';
 import { ResponseInterceptor } from 'src/common/interceptors/api-result.interceptor';
-import { fstat } from 'fs';
+import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as FormData from 'form-data';
+import { Public } from 'src/common/decorators/auth.docorator';
 
 @Controller('chain')
 export class ChainController {
@@ -27,14 +32,14 @@ export class ChainController {
     private readonly chatHistoryItemService: ChatHistoryItemService,
   ) {}
 
+  @Public()
   @Sse('stream')
-  @UsePipes(ValidationPipe)
-  @UseInterceptors(ResponseInterceptor)
   async create(
     @Query('input') input: string,
     @Query('chat_history_id') chat_history_id: number,
     @Request() req,
   ) {
+    console.log(32321);
     // const userId = req.user.id;
 
     const chatHistory = await this.chatHistoryItemService.findAll({
@@ -46,13 +51,15 @@ export class ChainController {
       input: input,
     });
 
-    this.chatHistoryItemService.create({
+    console.log(data);
+
+    await this.chatHistoryItemService.create({
       type: 0,
       content: input,
       chat_history_id,
     });
 
-    this.chatHistoryItemService.create({
+    await this.chatHistoryItemService.create({
       type: 1,
       content: data.data,
       chat_history_id,
@@ -88,5 +95,36 @@ export class ChainController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.chainService.findOne(+id);
+  }
+
+  @UsePipes(ValidationPipe)
+  @UseInterceptors(ResponseInterceptor)
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFIle(@UploadedFile() file) {
+    const fileName = decodeURIComponent(escape(file.originalname));
+    const file_path = path.join(
+      __dirname,
+      `../../../public/uploads/${fileName}`,
+    );
+
+    console.log(process.cwd());
+
+    fs.writeFileSync(file_path, file.buffer);
+    // const t = fs.createReadStream(file_path);
+
+    // const formData = new FormData();
+    // formData.append('file', t);
+    // formData.append('name', '321312');
+
+    const data = await axios.post('http://127.0.0.1:5000/doc', {
+      path: process.cwd() + '/public/uploads/' + fileName,
+    });
+
+    console.log(data.data);
+
+    return {
+      data: data.data,
+    };
   }
 }

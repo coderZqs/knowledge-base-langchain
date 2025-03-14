@@ -37,6 +37,7 @@ export class AuthController {
 
   @UsePipes(ValidationPipe)
   @UseInterceptors(ResponseInterceptor)
+  @Public()
   @Get('/refresh-token')
   async refreshToken(@Request() req) {
     const data = await this.tokenService.generateAccessToken(req.user);

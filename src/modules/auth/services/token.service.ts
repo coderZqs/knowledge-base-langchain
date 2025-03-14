@@ -11,7 +11,9 @@ export class TokenService {
 
   async generateAccessToken(payload) {
     const p = { id: payload.id, username: payload.username };
-    const accessToken = await this.jwtService.signAsync(p);
+    const accessToken = await this.jwtService.signAsync(p, {
+      expiresIn: this.securityConfig.jwtExpire,
+    });
     const refreshToken = await this.jwtService.signAsync(p, {
       expiresIn: this.securityConfig.refreshExpire,
     });
